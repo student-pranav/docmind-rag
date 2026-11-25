@@ -34,3 +34,18 @@ async def chat(request: ChatRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+from pathlib import Path
+import shutil
+from fastapi import File, HTTPException, UploadFile
+
+@app.post("/upload")
+async def upload_pdf(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    dest = Path("./data/doc.pdf")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with dest.open("wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return {"status": "uploaded", "filename": file.filename}

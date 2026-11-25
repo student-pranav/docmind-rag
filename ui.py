@@ -5,12 +5,27 @@ API_URL = "http://127.0.0.1:8000"
 
 st.set_page_config(page_title="DocMind RAG Assistant", page_icon="📄", layout="centered")
 st.title("📄 DocMind RAG Assistant")
-st.caption("Ask questions about your PDF and get grounded answers with page citations.")
+st.caption("Upload a PDF, ask questions, and get grounded answers with page citations.")
 
 with st.sidebar:
     st.header("Document Controls")
+    uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"])
+    if uploaded_file is not None and st.button("Upload & Ingest PDF"):
+        with st.spinner("Uploading and indexing PDF..."):
+            files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "application/pdf")}
+            up_res = requests.post(f"{API_URL}/upload", files=files, timeout=60)
+            if up_res.status_code == 200:
+                ing_res = requests.post(f"{API_URL}/ingest", timeout=120)
+                if ing_res.status_code == 200:
+                    st.success(f"Indexed {ing_res.json()['chunks_processed']} chunks from {uploaded_file.name}!")
+                else:
+                    st.error(f"Ingest error: {ing_res.text}")
+            else:
+                st.error(f"Upload error: {up_res.text}")
+
+    st.divider()
     top_k = st.slider("Chunks to retrieve (top_k)", min_value=1, max_value=10, value=3)
-    if st.button("Re-ingest data/doc.pdf"):
+    if st.button("Re-ingest current PDF"):
         with st.spinner("Ingesting PDF into ChromaDB..."):
             res = requests.post(f"{API_URL}/ingest", timeout=120)
             if res.status_code == 200:
